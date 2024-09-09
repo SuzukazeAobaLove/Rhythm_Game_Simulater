@@ -26,11 +26,12 @@ public class MainMenu : MonoBehaviour
     List<string> Descriptions = new List<string>();
     void Start()
     {
+        
         View = GetComponentInChildren<SimpleScrollSnap>();
         SelfRect = GetComponent<RectTransform>();
 
         VerSionText = transform.Find("Version").gameObject.GetComponent<TextMeshProUGUI>();
-        VerSionText.text = "Version: " + PlayerSettings.bundleVersion;
+        VerSionText.text = "Version: " + Application.version;
 
         ExitButton = transform.Find("Exit").gameObject.GetComponent<Button>();
         ExitButton.onClick.AddListener(() => Application.Quit());
@@ -105,8 +106,17 @@ public class MainMenu : MonoBehaviour
     //调用文件读取系统
     IEnumerator LoadFileAsync(int Mode)
     {
-
+        switch((Scenes)(Mode + 1))
+        {
+            case Scenes.Setting:
+                {
+                    FileManager.ReadProfile();
+                    break;
+                }
+        }
         yield return new WaitForSeconds(2f);
+
+        //将来改成调用GameSystem的函数
         SceneManager.LoadScene(Mode + 1);
     }
 }
