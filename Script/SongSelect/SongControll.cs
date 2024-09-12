@@ -30,9 +30,9 @@ public class SongControl : MonoBehaviour
         BPM.text = "BPM " + target.BPM;
         Level.text = "" + (int)target.Difficulty;
         if (target.Histroy == null) Best.text = "";
-        
-        //Debug.Log(FileManager.ChartPath + target.InfoPath + "/cover.png");
-        Cover.sprite = Resources.Load<Sprite>(FileManager.ChartPath + target.InfoPath + "/cover");
+
+        StartCoroutine(FileManager.ReadOutPNG(FileManager.ChartPath + target.InfoPath + "/cover.png", Cover));
+        //Cover.sprite = Resources.Load<Sprite>(FileManager.ChartPath + target.InfoPath + "/cover");
     }
     
 }

@@ -467,7 +467,7 @@ MonoBehaviour:
   infiniteScrollingSpacing: 0.2
   useOcclusionCulling: 0
   startingPanel: 0
-  useSwipeGestures: 1
+  useSwipeGestures: 0
   minimumSwipeSpeed: 0
   previousButton: {fileID: 1062356891}
   nextButton: {fileID: 1066529635}
@@ -1679,9 +1679,9 @@ MonoBehaviour:
     Bottom: 0
   useInfiniteScrolling: 1
   infiniteScrollingSpacing: 0
-  useOcclusionCulling: 0
+  useOcclusionCulling: 1
   startingPanel: 0
-  useSwipeGestures: 1
+  useSwipeGestures: 0
   minimumSwipeSpeed: 0
   previousButton: {fileID: 1961974253}
   nextButton: {fileID: 1168731495}
@@ -1813,6 +1813,9 @@ MonoBehaviour:
   Prefab: {fileID: 8285495457551954848, guid: 9ac08b9b3e4d8b94f93c48e1acbe5433, type: 3}
   Content: {fileID: 1157786893}
   SongView: {fileID: 1394548049}
+  StartButton: {fileID: 1516688828}
+  LeftSongButton: {fileID: 1961974253}
+  RightSongButton: {fileID: 1168731495}
 --- !u!114 &1508906244
 MonoBehaviour:
   m_ObjectHideFlags: 0

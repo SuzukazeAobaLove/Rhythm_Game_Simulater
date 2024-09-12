@@ -66,6 +66,8 @@ public class ProfileController : MonoBehaviour
 
         RightDetail = DetailView.transform.Find("RightButton").gameObject.GetComponent<Button>();
         RightDetail.onClick.AddListener(() => SwitchDetail());
+
+        BindEdit();
     }
 
 

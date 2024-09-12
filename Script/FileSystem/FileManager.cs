@@ -5,6 +5,8 @@ using System.IO;
 using System.Text.RegularExpressions;
 using Unity.VisualScripting.AssemblyQualifiedNameParser;
 using UnityEngine;
+using UnityEngine.Networking;
+using UnityEngine.UI;
 
 /// <summary>
 /// 文件管理器，负责读谱面，段位配置，读写设置，统计数据
@@ -18,6 +20,55 @@ public static class FileManager
     public static string ChartPath = ProjectPath + "/Charts/";
     private static string CachePath = ProjectPath + "/Charts/log.txt";
     private static string RankPath = ProjectPath + "/RankLists/";
+
+    #region 外部读取部分
+    /// <summary>
+    /// 从外部读取png文件
+    /// </summary>
+    /// <param name="path">路径</param>
+    /// <param name="holder">返回至</param>
+    /// <returns></returns>
+    public static IEnumerator ReadOutPNG(string path,Image holder)
+    {
+        
+        using (UnityWebRequest www = UnityWebRequestTexture.GetTexture(path))
+        {
+            yield return www.SendWebRequest();
+
+            if (www.result != UnityWebRequest.Result.Success) Debug.LogError("Error loading audio: " + www.error);
+
+            Texture2D texture = ((DownloadHandlerTexture)www.downloadHandler).texture;
+
+            // 创建 Sprite
+            Sprite sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
+
+            //传递Sprite
+            holder.sprite = sprite;
+
+        }
+        
+    }
+    /// <summary>
+    /// 从外部读取png文件
+    /// </summary>
+    /// <param name="path">路径</param>
+    /// <param name="holder">返回至</param>
+    /// <returns></returns>
+    public static IEnumerator ReadOutMP3(string path, AudioSource holder)
+    {
+
+        using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip(path,AudioType.MPEG))
+        {
+            yield return www.SendWebRequest();
+
+            if (www.result != UnityWebRequest.Result.Success) Debug.LogError("Error loading audio: " + www.error);
+
+            holder.clip = DownloadHandlerAudioClip.GetContent(www);
+
+            holder.Play();
+        }
+    }
+    #endregion
 
     #region 设置部分
     /// <summary>
