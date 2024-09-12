@@ -17,7 +17,8 @@ public class MainMenu : MonoBehaviour
     private TextMeshProUGUI ModeDescription;
     private Button ExitButton;
     private Button StartButton;
-    private int LastPanel = 1;
+    private Button LeftButton;
+    private Button RightButton;
     private RectTransform SelfRect;
     private RectTransform LoadingIcon;
 
@@ -35,6 +36,12 @@ public class MainMenu : MonoBehaviour
 
         ExitButton = transform.Find("Exit").gameObject.GetComponent<Button>();
         ExitButton.onClick.AddListener(() => Application.Quit());
+
+        LeftButton = transform.Find("ModeSelect").Find("LeftButton").gameObject.GetComponent<Button>();
+        LeftButton.onClick.AddListener(() => UpdateCenter());
+        
+        RightButton = transform.Find("ModeSelect").Find("RightButton").gameObject.GetComponent<Button>();
+        RightButton.onClick.AddListener(() => UpdateCenter());
 
         StartButton = transform.Find("Enter").gameObject.GetComponent<Button>();
         StartButton.onClick.AddListener(ChooseMode);
@@ -92,31 +99,34 @@ public class MainMenu : MonoBehaviour
         StartCoroutine("LoadFileAsync", Selected);
     }
 
-
-    void Update()
+    /// <summary>
+    /// 更新中心显示
+    /// </summary>
+    public void UpdateCenter()
     {
-        if (LastPanel != View.CenteredPanel)
-        {
-            LastPanel = View.CenteredPanel;
-            ModeTitle.text = Titles[LastPanel];
-            ModeDescription.text = Descriptions[LastPanel];
-        }
+        ModeTitle.text = Titles[View.CenteredPanel];
+        ModeDescription.text = Descriptions[View.CenteredPanel];
     }
 
     //调用文件读取系统
     IEnumerator LoadFileAsync(int Mode)
     {
-        switch((Scenes)(Mode + 1))
+        Mode += 1;
+        switch((Scenes)Mode)
         {
             case Scenes.Setting:
                 {
-                    FileManager.ReadProfile();
+                    FileManager.LoadProfile();
+                    break;
+                }
+            case Scenes.NormalPlay:
+                {
+                    FileManager.LoadChartInfo();
                     break;
                 }
         }
         yield return new WaitForSeconds(2f);
 
-        //将来改成调用GameSystem的函数
-        SceneManager.LoadScene(Mode + 1);
+        GameSystem.OpenScene(Mode);
     }
 }

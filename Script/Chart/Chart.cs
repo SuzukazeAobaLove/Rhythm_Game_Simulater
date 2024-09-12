@@ -4,5 +4,6 @@ using UnityEngine;
 
 public class Chart
 {
+    public PartialChart Info;
     
 }
