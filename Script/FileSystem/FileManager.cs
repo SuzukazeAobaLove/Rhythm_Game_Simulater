@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using NLayer;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -21,6 +22,10 @@ public static class FileManager
     private static string CachePath = ProjectPath + "/Charts/log.txt";
     private static string RankPath = ProjectPath + "/RankLists/";
 
+    #region 文件状态
+    public static bool ProfileLoaded = false;
+    public static bool ChartLoaded = false;
+    #endregion
     #region 外部读取部分
     /// <summary>
     /// 从外部读取png文件
@@ -30,12 +35,11 @@ public static class FileManager
     /// <returns></returns>
     public static IEnumerator ReadOutPNG(string path,Image holder)
     {
-        
         using (UnityWebRequest www = UnityWebRequestTexture.GetTexture(path))
         {
             yield return www.SendWebRequest();
 
-            if (www.result != UnityWebRequest.Result.Success) Debug.LogError("Error loading audio: " + www.error);
+            if (www.result != UnityWebRequest.Result.Success) UnityEngine.Debug.LogError("Error loading audio: " + www.error);
 
             Texture2D texture = ((DownloadHandlerTexture)www.downloadHandler).texture;
 
@@ -44,29 +48,32 @@ public static class FileManager
 
             //传递Sprite
             holder.sprite = sprite;
-
         }
         
     }
+    
     /// <summary>
-    /// 从外部读取png文件
+    /// 读取外部MP3
     /// </summary>
-    /// <param name="path">路径</param>
-    /// <param name="holder">返回至</param>
+    /// <param name="path"></param>
     /// <returns></returns>
-    public static IEnumerator ReadOutMP3(string path, AudioSource holder)
+    public static AudioClip ReadOutMP3(string path)
     {
+        string filename = System.IO.Path.GetFileNameWithoutExtension(path);
 
-        using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip(path,AudioType.MPEG))
-        {
-            yield return www.SendWebRequest();
+        MpegFile mpegFile = new MpegFile(path);
 
-            if (www.result != UnityWebRequest.Result.Success) Debug.LogError("Error loading audio: " + www.error);
-
-            holder.clip = DownloadHandlerAudioClip.GetContent(www);
-
-            holder.Play();
-        }
+        // assign samples into AudioClip
+        AudioClip audioClip = AudioClip.Create(filename,
+                                        (int)(mpegFile.Length / sizeof(float) / mpegFile.Channels),
+                                        mpegFile.Channels,
+                                        mpegFile.SampleRate,
+                                        true,
+                                        data => { int actualReadCount = mpegFile.ReadSamples(data, 0, data.Length); },
+                                        //上面的回调不能少，下面的回调经笔者测试，就算不要也能正常搞事情！
+                                        position => { mpegFile = new MpegFile(path); }
+                                      );
+        return audioClip;
     }
     #endregion
 
@@ -95,6 +102,7 @@ public static class FileManager
             if(!Directory.Exists(SettingFolderPath)) Directory.CreateDirectory(SettingFolderPath);
             File.WriteAllText(SettingFilePath,JsonConvert.SerializeObject(UserProfile));
         }
+        ProfileLoaded = true;
     }
 
     /// <summary>
@@ -129,19 +137,16 @@ public static class FileManager
         ChartInfos = new List<PartialChart>();
         CacheTemp = new Dictionary<string, PartialChart>();
 
-
         //路径不存在那么一定没有谱面
         if (!Directory.Exists(ChartPath))
         {
             Directory.CreateDirectory(ChartPath);
-            Debug.Log("No Chart Path");
         }
         //如果没有缓存文件，只能全量扫描
         else if (!File.Exists(CachePath))
         {
             TraverseFolders(ChartPath, false);
             SaveCacheFile();
-            Debug.Log("Scan The Whole");
         }
         //如果存在，首先读入缓存
         else
@@ -154,7 +159,7 @@ public static class FileManager
 
         }
         
-
+        ChartLoaded = true;
         //绑定游玩记录
         //BindPlayHistory();
     }

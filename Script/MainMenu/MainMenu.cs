@@ -11,44 +11,36 @@ using UnityEngine.UI;
 enum Scenes { MainMenu,Setting,NormalPlay,Ranking};
 public class MainMenu : MonoBehaviour
 {
-    private SimpleScrollSnap View;
-    private TextMeshProUGUI VerSionText;
-    private TextMeshProUGUI ModeTitle;
-    private TextMeshProUGUI ModeDescription;
-    private Button ExitButton;
-    private Button StartButton;
-    private Button LeftButton;
-    private Button RightButton;
+    [Header("组件引用")]
+    public SimpleScrollSnap View;
+    public TextMeshProUGUI VerSionText;
+    public TextMeshProUGUI LoadingText;
+    public TextMeshProUGUI ModeTitle;
+    public TextMeshProUGUI ModeDescription;
+    public Button ExitButton;
+    public Button StartButton;
+    public Button LeftButton;
+    public Button RightButton;
     private RectTransform SelfRect;
-    private RectTransform LoadingIcon;
+    public RectTransform LoadingIcon;
 
     public float Time = 1.5f;
-    List<string> Titles = new List<string>();
-    List<string> Descriptions = new List<string>();
+    private List<string> Titles = new List<string>();
+    private List<string> Descriptions = new List<string>();
+
     void Start()
     {
         
         View = GetComponentInChildren<SimpleScrollSnap>();
         SelfRect = GetComponent<RectTransform>();
 
-        VerSionText = transform.Find("Version").gameObject.GetComponent<TextMeshProUGUI>();
         VerSionText.text = "Version: " + Application.version;
-
-        ExitButton = transform.Find("Exit").gameObject.GetComponent<Button>();
-        ExitButton.onClick.AddListener(() => Application.Quit());
-
-        LeftButton = transform.Find("ModeSelect").Find("LeftButton").gameObject.GetComponent<Button>();
-        LeftButton.onClick.AddListener(() => UpdateCenter());
-        
-        RightButton = transform.Find("ModeSelect").Find("RightButton").gameObject.GetComponent<Button>();
-        RightButton.onClick.AddListener(() => UpdateCenter());
-
-        StartButton = transform.Find("Enter").gameObject.GetComponent<Button>();
         StartButton.onClick.AddListener(ChooseMode);
-
-        LoadingIcon = transform.Find("Loading").gameObject.GetComponent<RectTransform>();
-        LoadingIcon.gameObject.SetActive(false);
-
+        ExitButton.onClick.AddListener(Application.Quit);
+        LeftButton.onClick.AddListener(UpdateCenter);
+        RightButton.onClick.AddListener(UpdateCenter);
+        
+        //设定模式文本
         Titles.Add("浏览设置");
         Descriptions.Add("在此修改游戏设置、浏览游玩偏好");
         Titles.Add("常规游玩");
@@ -58,10 +50,38 @@ public class MainMenu : MonoBehaviour
         Titles.Add("数据统计");
         Descriptions.Add("浏览游玩数据统计、个人信息\n以及装扮获得、展示情况");
         
-        ModeTitle = transform.Find("ModeTitle").gameObject.GetComponent<TextMeshProUGUI>();
-        ModeDescription = transform.Find("ModeDescription").gameObject.GetComponent<TextMeshProUGUI>();
         ModeTitle.text = Titles[1];
         ModeDescription.text = Descriptions[1];
+
+        
+        //加载符号闪
+        LoadingIcon.DORotate(new Vector3(0f, 0f, 360f), 2f, RotateMode.FastBeyond360)
+           .SetEase(Ease.Linear) // 设置为线性缓动，使旋转速度均匀
+           .SetLoops(-1, LoopType.Restart); // 设置为无限循环);
+        //协程处理
+        StartCoroutine(PreLoad());
+        
+    }
+
+    /// <summary>
+    /// 预加载
+    /// </summary>
+    /// <returns></returns>
+    public IEnumerator PreLoad()
+    {
+        yield return null;
+
+        LoadingText.text = "加载设置中...";
+        if(!FileManager.ProfileLoaded) FileManager.LoadProfile();
+        //yield return new WaitForSeconds(2f);
+
+        LoadingText.text = "加载谱面中...";
+        if(!FileManager.ChartLoaded) FileManager.LoadChartInfo();
+
+        //结束设置
+        LoadingIcon.gameObject.SetActive(false);
+        LoadingText.gameObject.SetActive(false);
+        yield break;
     }
 
     //选择模式
@@ -89,11 +109,7 @@ public class MainMenu : MonoBehaviour
         ModeTitle.GetComponent<CanvasGroup>().DOFade(0f, Time).SetEase(Ease.OutCubic);
         VerSionText.GetComponent<CanvasGroup>().DOFade(0f, Time).SetEase(Ease.OutCubic);
 
-        //加载符号闪
-        LoadingIcon.gameObject.SetActive(true);
-        LoadingIcon.DORotate(new Vector3(0f, 0f, 360f), 2f, RotateMode.FastBeyond360)
-           .SetEase(Ease.Linear) // 设置为线性缓动，使旋转速度均匀
-           .SetLoops(-1, LoopType.Restart); // 设置为无限循环);
+        
 
         //读取文件后转换场景
         StartCoroutine("LoadFileAsync", Selected);
@@ -111,22 +127,8 @@ public class MainMenu : MonoBehaviour
     //调用文件读取系统
     IEnumerator LoadFileAsync(int Mode)
     {
-        Mode += 1;
-        switch((Scenes)Mode)
-        {
-            case Scenes.Setting:
-                {
-                    FileManager.LoadProfile();
-                    break;
-                }
-            case Scenes.NormalPlay:
-                {
-                    FileManager.LoadChartInfo();
-                    break;
-                }
-        }
         yield return new WaitForSeconds(2f);
 
-        GameSystem.OpenScene(Mode);
+        GameSystem.OpenScene(Mode + 1);
     }
 }
