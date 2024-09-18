@@ -1,3 +1,4 @@
+using DG.Tweening.Plugins.Core.PathCore;
 using Newtonsoft.Json;
 using NLayer;
 using System.Collections;
@@ -23,12 +24,44 @@ public static class FileManager
     private static string RankPath = ProjectPath + "/RankLists/";
 
     #region 文件状态
+    public static bool AllLoaded = false;
     public static bool ProfileLoaded = false;
     public static bool ChartLoaded = false;
     #endregion
+
+    #region 游玩部分
+    public static Sprite PlayBackground = null;
+
+    /// <summary>
+    /// 读取游玩背景
+    /// </summary>
+    public static IEnumerator LoadPlayBackGround()
+    {
+        if(File.Exists(SettingFolderPath + "/bg.png"))
+        {
+            using (UnityWebRequest www = UnityWebRequestTexture.GetTexture(SettingFolderPath + "/bg.png"))
+            {
+                yield return www.SendWebRequest();
+
+                if (www.result != UnityWebRequest.Result.Success) UnityEngine.Debug.LogError("Error loading audio: " + www.error);
+
+                Texture2D texture = ((DownloadHandlerTexture)www.downloadHandler).texture;
+
+                // 创建 Sprite
+                PlayBackground = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
+
+            }
+        }
+        else
+        {
+            PlayBackground = Resources.Load<Sprite>("default_bg");
+        }
+    }
+
+    #endregion
     #region 外部读取部分
     /// <summary>
-    /// 从外部读取png文件
+    /// 从外部读取png文件至Image
     /// </summary>
     /// <param name="path">路径</param>
     /// <param name="holder">返回至</param>
@@ -51,7 +84,9 @@ public static class FileManager
         }
         
     }
+
     
+
     /// <summary>
     /// 读取外部MP3
     /// </summary>
@@ -182,12 +217,18 @@ public static class FileManager
         //如果是叶文件夹，则开始解析
         if(subfolders.Length == 0)
         {
+            //首先进行重命名
+            if(File.Exists(folderPath + "/maidata.txt")) File.Move(folderPath + "/maidata.txt", folderPath + "/data.txt");
+            if (File.Exists(folderPath + "/track.mp3")) File.Move(folderPath + "/track.mp3", folderPath + "/music.mp3");
+            if (File.Exists(folderPath + "/bg.png")) File.Move(folderPath + "/bg.png", folderPath + "/cover.png");
+
             //如果有缓存
             if(ifCache)
             {
                 string RelativePath = folderPath.Substring(folderPath.IndexOf(ChartPath) + ChartPath.Length);
                 //Debug.Log(RelativePath);
 
+                
                 if (!File.Exists(folderPath + "/data.txt")) return;
 
                 //如果有缓存文件中有写
@@ -204,6 +245,7 @@ public static class FileManager
                     else CacheTemp.Remove(RelativePath);
                 }
             }
+
             
             if (!File.Exists(folderPath + "/music.mp3")) return;
             if (!File.Exists(folderPath + "/cover.png")) return;
@@ -269,6 +311,7 @@ public static class FileManager
                         chart.FormalName = Tokens[1];
                         break;
                     }
+                case "shortid":
                 case "id":
                     {
                         if (chart.ID == 0) CollectProperty++;
@@ -281,18 +324,21 @@ public static class FileManager
                         chart.SongWriter = Tokens[1];
                         break;
                     }
+                case "des":
                 case "designer":
                     {
                         if (chart.ChartWriter == null) CollectProperty++;
                         chart.ChartWriter = Tokens[1];
                         break;
                     }
+                case "wholebpm":
                 case "bpm":
                     {
                         if(chart.BPM == 0) CollectProperty++;
                         chart.BPM = int.Parse(Tokens[1]);
                         break;
                     }
+                case "genre":
                 case "collection":
                     {
                         if (chart.Collection == null) CollectProperty++;
@@ -302,7 +348,7 @@ public static class FileManager
             }
         }
         //如果属性数量不够
-        if(CollectProperty != 7)return null;
+        if(CollectProperty < 7)return null;
         else return chart;
     }
 

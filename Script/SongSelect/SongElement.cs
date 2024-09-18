@@ -8,6 +8,7 @@ using UnityEngine.UI;
 public class SongElement : MonoBehaviour
 {
     public Image Cover;
+    public bool Initialed = false;
     public TextMeshProUGUI FormalName;
     public TextMeshProUGUI Designer;
     public TextMeshProUGUI Composer;
@@ -21,36 +22,31 @@ public class SongElement : MonoBehaviour
     /// 绑定
     /// </summary>
     /// <param name="target"></param>
-    public void Bind(PartialChart target)
-    {
-        Target = target;
+    public void Bind(PartialChart target) => Target = target;
+    
 
-        Composer.text = target.SongWriter;
-        FormalName.text = target.FormalName;
-        Designer.text = target.ChartWriter;
-        BPM.text = "BPM " + target.BPM;
-        Level.text = "" + (int)target.Difficulty;
-        if (target.Histroy == null) Best.text = "";
-
-        StartCoroutine(FileManager.ReadOutPNG(FileManager.ChartPath + target.InfoPath + "/cover.png", Cover));
-        
-    }
     /// <summary>
-    /// 绑定
+    /// 在激活的时候才会更新值
     /// </summary>
-    /// <param name="target"></param>
-    public void SetData(PartialChart target)
+    public void OnEnable()
     {
-        Target = target;
-
-        Composer.text = target.SongWriter;
-        FormalName.text = target.FormalName;
-        Designer.text = target.ChartWriter;
-        BPM.text = "BPM " + target.BPM;
-        Level.text = "" + (int)target.Difficulty;
-        if (target.Histroy == null) Best.text = "";
-
-        StartCoroutine(FileManager.ReadOutPNG(FileManager.ChartPath + target.InfoPath + "/cover.png", Cover));
-
+        if (Initialed == false) Initialed = true;
+        else UpdateData();
     }
+    
+    /// <summary>
+    /// 更新显示数据
+    /// </summary>
+    public void UpdateData()
+    {
+        Composer.text = Target.SongWriter;
+        FormalName.text = Target.FormalName;
+        Designer.text = Target.ChartWriter;
+        BPM.text = "BPM " + Target.BPM;
+        Level.text = "" + (int)Target.Difficulty;
+        if (Target.Histroy == null) Best.text = "";
+
+        StartCoroutine(FileManager.ReadOutPNG(FileManager.ChartPath + Target.InfoPath + "/cover.png", Cover));
+    }
+    
 }

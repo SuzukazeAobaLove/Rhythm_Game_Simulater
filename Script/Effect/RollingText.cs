@@ -15,7 +15,7 @@ public class RollingText : MonoBehaviour
         Rect = GetComponent<ScrollRect>();
         Text = GetComponentInChildren<TextMeshProUGUI>();
         Text.rectTransform.sizeDelta = new Vector2(Text.text.Length * 30f,Text.rectTransform.rect.height);
-        if(Text.text.Length > 20) IfRolling = true;
+        if(Text.text.Length > 24) IfRolling = true;
     }
 
     // Update is called once per frame

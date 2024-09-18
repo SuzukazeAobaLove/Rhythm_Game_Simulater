@@ -6,18 +6,18 @@ using UnityEngine;
 using UnityEngine.UI;
 
 
-public class ProfileController : MonoBehaviour
+public class ProfileController : BasePanel
 {
     public static ProfileController Instance;
 
-    private SimpleScrollSnap ClassView;             //类别视图
-    private SimpleScrollSnap DetailView;            //细则试图
-    private TextMeshProUGUI CurValue;               //显示当前修改值
+    public SimpleScrollSnap ClassView;             //类别视图
+    public SimpleScrollSnap DetailView;            //细则试图
+    public TextMeshProUGUI CurValue;               //显示当前修改值
 
-    private Button LeftPanel;                       //选择左侧类别
-    private Button RightPanel;                      //选择右侧类别
-    private Button LeftDetail;                      //选择左侧细则
-    private Button RightDetail;                     //选择右侧细则
+    public Button LeftPanel;                       //选择左侧类别
+    public Button RightPanel;                      //选择右侧类别
+    public Button LeftDetail;                      //选择左侧细则
+    public Button RightDetail;                     //选择右侧细则
 
     public UserProfile Profile;                     //引用设置
     private List<int> ClassIndex = new List<int>(); //每个类别初始的细则索引
@@ -30,44 +30,34 @@ public class ProfileController : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+
         
-        //调试模式下确保读取设置
-        if (GameSystem.DebugTry()) FileManager.LoadProfile();
-        
+
+    }
+
+    protected override void Start()
+    {
         //标注索引
         int sum = 0;
         ClassIndex.Add(sum);
-        foreach(var block in FileManager.UserProfile.ProfileBlocks)
+        foreach (var block in FileManager.UserProfile.ProfileBlocks)
         {
             sum += block.GetDetailNum();
             ClassIndex.Add(sum);
         }
 
-        
-    }
+        Type = Panel.Profile;
 
-    void Start()
-    {
         Profile = FileManager.UserProfile;
 
-        CurValue = transform.Find("CurValue").gameObject.GetComponent<TextMeshProUGUI>();
-
-        ClassView = transform.Find("ClassSelect").gameObject.GetComponent<SimpleScrollSnap>();
-        DetailView = transform.Find("DetailSelect").gameObject.GetComponent<SimpleScrollSnap>();
-
-        LeftPanel = ClassView.transform.Find("LeftButton").gameObject.GetComponent<Button>();
         LeftPanel.onClick.AddListener(() => SwitchClass(false));
-
-        RightPanel = ClassView.transform.Find("RightButton").gameObject.GetComponent<Button>();
         RightPanel.onClick.AddListener(() => SwitchClass(true));
-
-        LeftDetail = DetailView.transform.Find("LeftButton").gameObject.GetComponent<Button>();
         LeftDetail.onClick.AddListener(() => SwitchDetail());
-
-        RightDetail = DetailView.transform.Find("RightButton").gameObject.GetComponent<Button>();
         RightDetail.onClick.AddListener(() => SwitchDetail());
 
         BindEdit();
+
+        base.Start();
     }
 
 
@@ -77,7 +67,7 @@ public class ProfileController : MonoBehaviour
     public void SaveAndExit()
     {
         FileManager.SaveProfile();
-        GameSystem.ExitScene();
+        GameSystem.ClosePanel();
     }
 
     /// <summary>
