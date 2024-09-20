@@ -9,9 +9,9 @@ public class SongElement : MonoBehaviour
 {
     public Image Cover;
     public bool Initialed = false;
-    public TextMeshProUGUI FormalName;
-    public TextMeshProUGUI Designer;
-    public TextMeshProUGUI Composer;
+    public Text FormalName;
+    public Text Designer;
+    public Text Composer;
     public TextMeshProUGUI BPM;
     public TextMeshProUGUI Best;
     public TextMeshProUGUI Level;
@@ -45,8 +45,7 @@ public class SongElement : MonoBehaviour
         BPM.text = "BPM " + Target.BPM;
         Level.text = "" + (int)Target.Difficulty;
         if (Target.Histroy == null) Best.text = "";
-
-        StartCoroutine(FileManager.ReadOutPNG(FileManager.ChartPath + Target.InfoPath + "/cover.png", Cover));
+        Cover.sprite = FileManager.ReadOutPNG(FileManager.ChartPath + Target.InfoPath + "/cover.png");
     }
     
 }

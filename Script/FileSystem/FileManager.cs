@@ -30,35 +30,82 @@ public static class FileManager
     #endregion
 
     #region 游玩部分
-    public static Sprite PlayBackground = null;
+    
+    /// <summary>
+    /// 当前完全加载的谱面
+    /// </summary>
+    public static Chart CurLoadChart;
 
     /// <summary>
-    /// 读取游玩背景
+    /// 解析谱面游玩部分
     /// </summary>
-    public static IEnumerator LoadPlayBackGround()
+    /// <param name="chart"></param>
+    /// <returns></returns>
+    public static void LoadChartFile(PartialChart chart)
     {
-        if(File.Exists(SettingFolderPath + "/bg.png"))
+        CurLoadChart = new Chart();
+        
+        CurLoadChart.Info_ = chart;
+        CurLoadChart.Music_ = ReadOutMP3(ChartPath + chart.InfoPath + "/music.mp3");
+        
+        //游玩部分解析
+        CurLoadChart.Notes_ = new List<Chart.Note>();
+        
+        //切割文本
+        string[] Elements = File.ReadAllText(ChartPath + chart.InfoPath + "/data.txt").Split("$");
+
+
+        foreach (string Element in Elements)
         {
-            using (UnityWebRequest www = UnityWebRequestTexture.GetTexture(SettingFolderPath + "/bg.png"))
+            if (!Element.Contains("inote ")) continue;
+
+            double AlignTime = 0;
+            string[] Eq = Element.Split("=");
+            if (Eq[0].Contains('5'))
             {
-                yield return www.SendWebRequest();
+                //按Bpm分段
+                string[] Bpms = Eq[1].Split("(");
+                
+                foreach(string Bpm in Bpms)
+                {
+                    //解析Bpm值
+                    int bpm = int.Parse(Bpm.Substring(0, Bpm.IndexOf(")")));
+                    
+                    //按切分音分段
+                    string[] Divs = Bpm.Split("{");
+                    foreach(string Div in Divs)
+                    {
+                        //解析切分音值
+                        int div = int.Parse(Div.Substring(0, Div.IndexOf("}")));
+                        double delta = 60 / bpm * 4 / div;
+                        
+                        //读至末尾
+                        int index = 0;
+                        while (index < Div.Length)
+                        {
+                            //逗号则加时
+                            if (Div[index] == ',') AlignTime += delta;
+                            else
+                            {
+                                //否则先将整体提取
+                                string Token = "";
+                                while(index < Div.Length && Div[index] != ',')
+                                {
+                                    Token += Div[index];
+                                    index++;
+                                }
 
-                if (www.result != UnityWebRequest.Result.Success) UnityEngine.Debug.LogError("Error loading audio: " + www.error);
-
-                Texture2D texture = ((DownloadHandlerTexture)www.downloadHandler).texture;
-
-                // 创建 Sprite
-                PlayBackground = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
-
+                            }
+                        }
+                        
+                    }
+                }
             }
-        }
-        else
-        {
-            PlayBackground = Resources.Load<Sprite>("default_bg");
+
         }
     }
-
     #endregion
+
     #region 外部读取部分
     /// <summary>
     /// 从外部读取png文件至Image
@@ -66,26 +113,14 @@ public static class FileManager
     /// <param name="path">路径</param>
     /// <param name="holder">返回至</param>
     /// <returns></returns>
-    public static IEnumerator ReadOutPNG(string path,Image holder)
+    public static Sprite ReadOutPNG(string path)
     {
-        using (UnityWebRequest www = UnityWebRequestTexture.GetTexture(path))
-        {
-            yield return www.SendWebRequest();
-
-            if (www.result != UnityWebRequest.Result.Success) UnityEngine.Debug.LogError("Error loading audio: " + www.error);
-
-            Texture2D texture = ((DownloadHandlerTexture)www.downloadHandler).texture;
-
-            // 创建 Sprite
-            Sprite sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
-
-            //传递Sprite
-            holder.sprite = sprite;
-        }
+        byte[] imageData = File.ReadAllBytes(path);
+        Texture2D texture = new Texture2D(2, 2); // 创建一个 Texture2D 对象
+        texture.LoadImage(imageData); // 从字节数组加载图片数据
+        return Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), Vector2.one * 0.5f);
         
-    }
-
-    
+    }  
 
     /// <summary>
     /// 读取外部MP3
@@ -150,7 +185,7 @@ public static class FileManager
 
     #endregion
 
-    #region 谱面部分
+    #region 谱面信息部分
     /// <summary>
     /// 所有谱面的信息
     /// </summary>
@@ -159,10 +194,6 @@ public static class FileManager
     /// 从缓存中获取的临时字典
     /// </summary>
     private static Dictionary<string, PartialChart> CacheTemp;
-    /// <summary>
-    /// 当前完全加载的谱面
-    /// </summary>
-    public static Chart CurLoadChart;
     
     /// <summary>
     /// 加载谱面信息
@@ -376,15 +407,6 @@ public static class FileManager
         foreach(var chart in ChartInfos) writer.WriteLine(chart.GetWriteText());
         writer.Close();
         
-    }
-
-    /// <summary>
-    /// 加载某个谱面的全部信息
-    /// </summary>
-    /// <param name="Index"></param>
-    public static void LoadFullChart(int Index)
-    {
-
     }
 
     #endregion

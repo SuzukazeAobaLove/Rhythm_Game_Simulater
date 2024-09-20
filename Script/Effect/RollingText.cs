@@ -7,13 +7,13 @@ using UnityEngine.UI;
 public class RollingText : MonoBehaviour
 {
     private ScrollRect Rect;
-    private TextMeshProUGUI Text;
+    private Text Text;
     private bool IfRolling;
     
     void Start()
     {
         Rect = GetComponent<ScrollRect>();
-        Text = GetComponentInChildren<TextMeshProUGUI>();
+        Text = GetComponentInChildren<Text>();
         Text.rectTransform.sizeDelta = new Vector2(Text.text.Length * 30f,Text.rectTransform.rect.height);
         if(Text.text.Length > 24) IfRolling = true;
     }

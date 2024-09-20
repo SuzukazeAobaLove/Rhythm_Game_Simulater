@@ -9,7 +9,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 enum Scenes { MainMenu,Setting,NormalPlay,Ranking};
-public class MainMenu : BasePanel
+public class MainMenu : MonoBehaviour
 {
     [Header("组件引用")]
     public SimpleScrollSnap ModeView;
@@ -33,10 +33,8 @@ public class MainMenu : BasePanel
         if (!FileManager.AllLoaded) SceneManager.LoadScene(0);
     }
 
-    protected override void Start()
+     void Start()
     {
-        Type = Panel.MainMenu;
-        
         
         ModeView = GetComponentInChildren<SimpleScrollSnap>();
         SelfRect = GetComponent<RectTransform>();
@@ -51,10 +49,14 @@ public class MainMenu : BasePanel
         Titles.Add("浏览设置");
         Descriptions.Add("在此修改游戏设置、浏览游玩偏好");
         Panels.Add(Panel.Profile);
-
-        Titles.Add("常规游玩");
+        
+        Titles.Add("自由游玩");
         Descriptions.Add("可以按任意顺序游玩已经解锁的曲目\n没有强制顺序、血量要求");
         Panels.Add(Panel.SongSelect);
+        
+        Titles.Add("街机模式");
+        Descriptions.Add("采用街机的模式进行游玩\n具有选择时间限制\n可以累计奖励区域里程");
+        Panels.Add(Panel.Arcade);
 
         Titles.Add("段位挑战");
         Descriptions.Add("按照设定好的顺序游玩曲目\n或者连续游玩随机挑选的曲目\n如果达成一定条件，则通过对应段位");
@@ -67,13 +69,10 @@ public class MainMenu : BasePanel
         ModeTitle.text = Titles[1];
         ModeDescription.text = Descriptions[1];
        
-        base.Start();
     }
 
-    
-
     //选择模式
-    public void ChooseMode() => GameSystem.OpenPanel(Panels[ModeView.CenteredPanel]);
+    public void ChooseMode() => GameSystem.OpenScene((int)Panels[ModeView.CenteredPanel]);
         /*
         
         //找到高亮物体

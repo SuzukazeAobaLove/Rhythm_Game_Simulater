@@ -1,45 +1,42 @@
 using DanielLochner.Assets.SimpleScrollSnap;
-using HaseMikan;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-public class SongSelect: BasePanel
+public class SongSelect: MonoBehaviour
 {
+    [Header("生成元素")]
     public List<PartialChart> ChartInfos;
     public GameObject Prefab;
     public Transform Content;
-
+    
     private AudioSource AudioSource;
     public SimpleScrollSnap SongView;
-
+    [Header("按钮")]
     public Button StartButton;
     public Button LeftSongButton;
     public Button RightSongButton;
 
     private PartialChart PreSong;
+    private bool IfNoChart = false;
+    private float TimeSinceSwitch = 0f;
 
     private void Awake()
     {
+        if (!FileManager.AllLoaded) SceneManager.LoadScene(0);
         AudioSource = GetComponent<AudioSource>();
     }
 
-    protected override void Start()
+    void Start()
     {   
-        CreateSongElement(); 
-        
-        Type = Panel.SongSelect;
-        
-        base.Start();
+        CreateSongElement();
+        LeftSongButton.onClick.AddListener(() => TimeSinceSwitch = 0);
+        RightSongButton.onClick.AddListener(() => TimeSinceSwitch = 0);
+        if(FileManager.ChartInfos.Count > 0) SwitchSong();
     }
 
-    public override void OnSceneOpened()
-    {
-        SwitchSong();
-        PreSong = FileManager.ChartInfos[SongView.CenteredPanel];
-    }
 
     /// <summary>
     /// 创建歌曲元素
@@ -48,14 +45,19 @@ public class SongSelect: BasePanel
     {
         //可操作性在这里
         ChartInfos = FileManager.ChartInfos;
-        
+        if(ChartInfos.Count == 0 )
+        {
+            IfNoChart = true;
+            return;
+        }
+
         //创建并绑定元素
-            foreach (var Chart in FileManager.ChartInfos)
-            {
-                var Element = Instantiate(Prefab, Content);
-                Element.GetComponent<SongElement>().Bind(Chart);
-                Element.GetComponent<SongElement>().UpdateData();
-            }
+        foreach (var Chart in ChartInfos)
+        {
+            var Element = Instantiate(Prefab, Content);
+            Element.GetComponent<SongElement>().Bind(Chart);
+            Element.GetComponent<SongElement>().UpdateData();
+        }
 
         //数量少直接绑定
         if (ChartInfos.Count < 30)
@@ -78,7 +80,7 @@ public class SongSelect: BasePanel
     /// </summary>
     private void SwitchSong()
     {
-        PreSong = FileManager.ChartInfos[SongView.CenteredPanel];
+        PreSong = ChartInfos[SongView.CenteredPanel];
         AudioSource.Stop();
         AudioSource.clip = FileManager.ReadOutMP3(FileManager.ChartPath + PreSong.InfoPath + "/music.mp3");
         AudioSource.Play();
@@ -87,20 +89,23 @@ public class SongSelect: BasePanel
     /// <summary>
     /// 绑定给返回按钮
     /// </summary>
-    public void ReturnButton() => GameSystem.ClosePanel();
+    public void ReturnButton() => GameSystem.ExitScene();
 
     /// <summary>
     /// 开始游玩按钮
     /// </summary>
     public void StartPlayButton()
     {
-        SceneManager.LoadScene(2);
+        FileManager.LoadChartFile(PreSong);
+        GameSystem.OpenScene((int)Panel.PlaySong);
     }
 
-    // Update is called once per frame
     void Update()
     {
-        if(PreSong != FileManager.ChartInfos[SongView.CenteredPanel]) SwitchSong();
-        
+        if (!IfNoChart)
+        {
+            if (TimeSinceSwitch <= 0.5f) TimeSinceSwitch += Time.deltaTime;
+            else if(PreSong != ChartInfos[SongView.CenteredPanel]) SwitchSong();
+        } 
     }
 }
