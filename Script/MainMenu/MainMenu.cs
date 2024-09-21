@@ -73,30 +73,6 @@ public class MainMenu : MonoBehaviour
 
     //选择模式
     public void ChooseMode() => GameSystem.OpenScene((int)Panels[ModeView.CenteredPanel]);
-        /*
-        
-        //找到高亮物体
-        GameObject Highlight = View.Content.transform.GetChild(Selected).gameObject;
-        Highlight.transform.parent = this.transform;
-        RectTransform HighlightRect = Highlight.GetComponent<RectTransform>();
-        //高亮
-        Highlight.transform.DOScale(new Vector3(2f, 2f, 2f), Time).SetEase(Ease.OutCubic);
-        HighlightRect.DOAnchorPos(new Vector2(SelfRect.rect.width/2, 0), Time).SetEase(Ease.OutCubic);
-
-        //按钮失效
-        ExitButton.enabled = false;
-        StartButton.enabled = false;
-        View.enabled = false;
-
-        //物体渐隐
-        ExitButton.GetComponent<CanvasGroup>().DOFade(0f,Time).SetEase(Ease.OutCubic);
-        StartButton.GetComponent<CanvasGroup>().DOFade(0f, Time).SetEase(Ease.OutCubic);
-        View.GetComponent<CanvasGroup>().DOFade(0f, Time).SetEase(Ease.OutCubic);
-        ModeDescription.GetComponent<CanvasGroup>().DOFade(0f, Time).SetEase(Ease.OutCubic);
-        ModeTitle.GetComponent<CanvasGroup>().DOFade(0f, Time).SetEase(Ease.OutCubic);
-        VerSionText.GetComponent<CanvasGroup>().DOFade(0f, Time).SetEase(Ease.OutCubic);
-
-        */
 
     /// <summary>
     /// 更新中心显示

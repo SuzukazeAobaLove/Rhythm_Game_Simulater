@@ -1,33 +1,159 @@
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
+[Serializable]
 public class Chart
 {
     public PartialChart Info_;
+    public Judges Judge_;
     public List<Note> Notes_;
     public AudioClip Music_;
-    public Sprite Cover_;
+    //public Sprite Cover_;
+    
+    public void AddNote(Note note)
+    {
+        Judge_.StaticAdd(note);
+        Notes_.Add(note); 
+    }
+}
+
+[Serializable]
+/// <summary>
+/// 单个Note
+/// </summary>
+public class Note
+{
+    /// <summary>
+    /// Note基础类型枚举
+    /// </summary>
+    public enum NoteType
+    {
+        Tap, Hold, Slide_Tap, Slide_Track, Wifi_Slide, Touch, TouchHold
+    };
 
     /// <summary>
-    /// 单个Note
+    /// 分区编号
     /// </summary>
-    public struct Note
+    public enum Block
     {
-        /// <summary>
-        /// Note类型枚举
-        /// </summary>
-        public enum NoteType {Tap,Ex_Tap,Long,Break};
+        A1, A2, A3, A4, A5, A6, A7, A8,
+        B1, B2, B3, B4, B5, B6, B7, B8,
+        C,
+        D1 = 24, D2, D3, D4, D5, D6, D7, D8,
+        E1, E2, E3, E4, E5, E6, E7, E8
+    };
+    [JsonConverter(typeof(StringEnumConverter))]
+    [SerializeField] public Block Rail_;          //分区
+    [JsonConverter(typeof(StringEnumConverter))]
+    [SerializeField] public NoteType Type_;       //类型
+    [SerializeField] public bool Ex_ = false;     //是否带保护套
+    [SerializeField] public bool Break_ = false;  //是否为绝赞
+    [SerializeField] public double ExactTime_;    //正解时间
 
-        public NoteType Type;       //类型
-        public double ExactTime;    //正解时间
-
-        public Note(NoteType type,double exactTime)
+    /// <summary>
+    /// 解析单个note
+    /// </summary>
+    /// <param name="Token"></param>
+    /// <returns></returns>
+    public static void ParseNote(Chart target,string token, double exTime)
+    {
+        //如果第一位是字母，则为Touch或者TouchHold
+        if (char.IsLetter(token[0]))
         {
-            Type = type;
-            ExactTime = exactTime;
+            //如果存在h则为TouchHold
+            if (token.Contains("h"))
+            {
+                Note note = new Note();
+                note.Type_ = NoteType.TouchHold;
+                note.ExactTime_ = exTime;
+                if (Enum.TryParse(token.Substring(0, token.IndexOf("C") == -1 ? 2 : 1), false, out note.Rail_))
+                {
+                    //NOTE: 解析时值表达式
+                    target.AddNote(note);
+                }
+            }
+
+            //否则是Touch
+            else
+            {
+                Note note = new Note();
+                note.Type_ = NoteType.Touch;
+                note.ExactTime_ = exTime;
+                if (Enum.TryParse(token.Substring(0, token.IndexOf("C") == -1 ? 2 : 1), false, out note.Rail_))
+                {
+                    //NOTE: 烟花效果
+                    target.AddNote(note);
+                }
+
+
+            }
         }
+        else
+        {
+            //如过包含h，那么一定是Hold
+            if (token.Contains("h"))
+            {
+                Note note = new Note();
+                note.Type_ = NoteType.Hold;
+                note.ExactTime_ = exTime;
+                if (token.Contains("b")) note.Break_ = true;
+                if (token.Contains("x")) note.Ex_ = true;
+
+                if (token[0] >= '1' && token[0] <= '8')
+                {
+                    note.Rail_ = (Block)(token[0] - '1');
+                    target.AddNote(note);
+                }
+            }
+            //如果包含时值表达式，那么一定是Slide
+            else if (token.Contains("["))
+            {
+                Note note = new Note();
+                note.Type_ = NoteType.Slide_Tap;
+                note.ExactTime_ = exTime;
+                if (token.Substring(0, 3).Contains("b")) note.Break_ = true;
+                if (token.Substring(0, 3).Contains("x")) note.Ex_ = true;
+                if (token[0] >= '1' && token[0] <= '8')
+                {
+                    note.Rail_ = (Block)(token[0] - '1');
+                    target.AddNote(note);
+                }
+                else return;
+
+                //处理同起点星星
+                string[] each = token.Split('*');
+                foreach(var slide in each)
+                {
+                    Note snote = new Note();
+                    snote.Type_ = NoteType.Slide_Track;
+                    snote.ExactTime_ = exTime;
+                    if(slide.Substring(3).Contains("b")) snote.Break_ = true;
+                    snote.Rail_ = (Block)(token[0] - '1');
+                    target.AddNote(snote);
+                }
+            }
+            //剩下的只可能是Tap
+            else
+            {
+                Note note = new Note();
+                note.Type_ = NoteType.Tap;
+                note.ExactTime_ = exTime;
+                if(token.Contains("b")) note.Break_ = true;
+                if(token.Contains("x")) note.Ex_ = true;
+
+                if (token[0] >= '1' && token[0] <= '8')
+                {
+                    note.Rail_ = (Block)(token[0] - '1');
+                    target.AddNote(note);
+                }
+            }
+        }
+        
     }
 
-    
 }

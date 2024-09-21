@@ -1,4 +1,6 @@
 using DanielLochner.Assets.SimpleScrollSnap;
+using DG.Tweening;
+using HaseMikan;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -13,11 +15,19 @@ public class SongSelect: MonoBehaviour
     public Transform Content;
     
     private AudioSource AudioSource;
+
+    [Header("滚动视图")]
+    public SimpleScrollSnap CategoryView;
     public SimpleScrollSnap SongView;
     [Header("按钮")]
+    public Button ReturnButton;
     public Button StartButton;
     public Button LeftSongButton;
     public Button RightSongButton;
+
+    [Header("动画参数")]
+    public float TransitTime = 2.5f;
+    public CanvasGroup BlackBackground;
 
     private PartialChart PreSong;
     private bool IfNoChart = false;
@@ -32,6 +42,8 @@ public class SongSelect: MonoBehaviour
     void Start()
     {   
         CreateSongElement();
+        ReturnButton.onClick.AddListener(ReturnButtonClick);
+        StartButton.onClick.AddListener(StartPlayButton);
         LeftSongButton.onClick.AddListener(() => TimeSinceSwitch = 0);
         RightSongButton.onClick.AddListener(() => TimeSinceSwitch = 0);
         if(FileManager.ChartInfos.Count > 0) SwitchSong();
@@ -89,7 +101,7 @@ public class SongSelect: MonoBehaviour
     /// <summary>
     /// 绑定给返回按钮
     /// </summary>
-    public void ReturnButton() => GameSystem.ExitScene();
+    public void ReturnButtonClick() => GameSystem.ExitScene();
 
     /// <summary>
     /// 开始游玩按钮
@@ -97,7 +109,33 @@ public class SongSelect: MonoBehaviour
     public void StartPlayButton()
     {
         FileManager.LoadChartFile(PreSong);
-        GameSystem.OpenScene((int)Panel.PlaySong);
+        
+        //找到高亮物体
+        GameObject Highlight = SongView.Content.transform.GetChild(SongView.CenteredPanel).gameObject;
+        Highlight.transform.parent = this.transform;
+        RectTransform HighlightRect = Highlight.GetComponent<RectTransform>();
+        //高亮
+        HighlightRect.DOScale(new Vector3(1.5f, 1.5f, 1.5f), TransitTime).SetEase(Ease.OutCubic);
+        HighlightRect.DOAnchorPos(new Vector2(GetComponent<RectTransform>().rect.width/2, 0), TransitTime).SetEase(Ease.OutCubic);
+
+        //按钮失效
+        ReturnButton.enabled = false;
+        StartButton.enabled = false;
+        SongView.enabled = false;
+
+        //物体渐隐
+        ReturnButton.GetComponent<CanvasGroup>().DOFade(0f,TransitTime - 1.0f).SetEase(Ease.OutCubic);
+        StartButton.GetComponent<CanvasGroup>().DOFade(0f, TransitTime - 1.0f).SetEase(Ease.OutCubic);
+        SongView.GetComponent<CanvasGroup>().DOFade(0f, TransitTime - 1.0f).SetEase(Ease.OutCubic);
+        CategoryView.GetComponent<CanvasGroup>().DOFade(0f, TransitTime - 1.0f).SetEase(Ease.OutCubic);
+
+        //打开黑背景
+        BlackBackground.DOFade(1f, TransitTime).SetEase(Ease.OutCubic);
+
+        //延时关闭音乐
+        LinerClock.InsertDelayAction(1.0f, () => AudioSource.Stop());
+        //延时加载
+        LinerClock.InsertDelayAction(TransitTime + 3.0f,() => GameSystem.OpenScene((int)Panel.PlaySong));
     }
 
     void Update()

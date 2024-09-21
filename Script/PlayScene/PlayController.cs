@@ -1,31 +1,14 @@
-using JetBrains.Annotations;
-using System.Collections;
-using System.Collections.Generic;
-using System.Runtime.ConstrainedExecution;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using static UnityEngine.GraphicsBuffer;
 
 public class PlayController : MonoBehaviour
 {
 
     public Image Cover;
-     
-    /// <summary>
-    /// 判定器,计划加入旧版判定
-    /// </summary>
-    public class Judges
-    {
-        public enum NoteType { Tap,Hold,Touch,Slide,Break};
-        public enum JudgeType {CRITICAL,PERFECT,GREAT,GOOD,MISS};
-        public Dictionary<Judges, int> JudgeCount;  //判定数量
-        public Dictionary<Judges, int> JudgeWeight; //判定权重数
-        public int MaXCombo = 0;
-        public int DxScore = 0;
-        public int TotalCount = 0;
-    }
-
+    public JudgeBoard JudgeBoard;
+    public Chart CurPlayChart;
+    public RectTransform[] Points;
     void Awake()
     {
         if (!FileManager.AllLoaded) SceneManager.LoadScene(0);
@@ -33,12 +16,25 @@ public class PlayController : MonoBehaviour
     
     void Start()
     {
+        CurPlayChart = FileManager.CurLoadChart;
         Cover.sprite = FileManager.ReadOutPNG(FileManager.ChartPath + FileManager.CurLoadChart.Info_.InfoPath + "/cover.png");
+        SetPointPos();
     }
 
 
     void Update()
     { 
         
+    }
+
+    /// <summary>
+    /// 设置点位
+    /// </summary>
+    public void SetPointPos()
+    {
+        for(int x = 0;x < 8;++x)
+        {
+            Points[x].localPosition = new Vector3(Mathf.Cos((22.5f + x *  45) * Mathf.Deg2Rad), Mathf.Sin((22.5f + x * 45) * Mathf.Deg2Rad), 0) * 650f;
+        }
     }
 }

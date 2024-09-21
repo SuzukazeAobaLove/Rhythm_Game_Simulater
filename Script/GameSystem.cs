@@ -11,6 +11,7 @@ public static class GameSystem
     
     static GameSystem()
     {
+        Application.targetFrameRate = 60;
         //打开主界面
         _SceneOpened.Push(1);
     }

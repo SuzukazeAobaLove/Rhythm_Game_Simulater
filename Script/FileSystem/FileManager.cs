@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
+using Unity.VisualScripting;
 using Unity.VisualScripting.AssemblyQualifiedNameParser;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -47,20 +48,23 @@ public static class FileManager
         
         CurLoadChart.Info_ = chart;
         CurLoadChart.Music_ = ReadOutMP3(ChartPath + chart.InfoPath + "/music.mp3");
-        
+        CurLoadChart.Judge_ = new Judges();
+
         //游玩部分解析
-        CurLoadChart.Notes_ = new List<Chart.Note>();
+        CurLoadChart.Notes_ = new List<Note>();
         
         //切割文本
-        string[] Elements = File.ReadAllText(ChartPath + chart.InfoPath + "/data.txt").Split("$");
+        string[] Elements = File.ReadAllText(ChartPath + chart.InfoPath + "/data.txt").Split("&");
 
-
+        //定位谱面内容
         foreach (string Element in Elements)
         {
-            if (!Element.Contains("inote ")) continue;
+            if (!Element.Contains("inote")) continue;
 
             double AlignTime = 0;
             string[] Eq = Element.Split("=");
+
+            //当前仅加载紫谱
             if (Eq[0].Contains('5'))
             {
                 //按Bpm分段
@@ -68,33 +72,52 @@ public static class FileManager
                 
                 foreach(string Bpm in Bpms)
                 {
+                    if (!Bpm.Contains(")")) continue;
+
                     //解析Bpm值
                     int bpm = int.Parse(Bpm.Substring(0, Bpm.IndexOf(")")));
                     
                     //按切分音分段
                     string[] Divs = Bpm.Split("{");
-                    foreach(string Div in Divs)
+                    for(int i = 0;i < Divs.Length;++i)
                     {
+                        string Div = Divs[i];
+                        if (!Div.Contains("}")) continue;
+
                         //解析切分音值
                         int div = int.Parse(Div.Substring(0, Div.IndexOf("}")));
-                        double delta = 60 / bpm * 4 / div;
-                        
+
+                        //去掉开头
+                        Div = Div.Remove(0, Div.IndexOf("}") + 1);
+
+                        double delta = 60.0 / bpm * 4.0 / div;
+
                         //读至末尾
                         int index = 0;
                         while (index < Div.Length)
                         {
                             //逗号则加时
-                            if (Div[index] == ',') AlignTime += delta;
+                            if (Div[index] == ',' || Div[index] == '，')
+                            {
+                                AlignTime += delta;
+                                index++;
+                            }
                             else
                             {
                                 //否则先将整体提取
-                                string Token = "";
-                                while(index < Div.Length && Div[index] != ',')
-                                {
-                                    Token += Div[index];
-                                    index++;
-                                }
+                                int stpos = index;
+                                while (index < Div.Length && Div[index] != ',') index++;
+                                string Tokens = Div.Substring(stpos, index - stpos);
 
+                                //切割多押
+                                foreach (var Token in Tokens.Split("/"))
+                                {
+                                    //Debug.Log(Token);
+                                    if (Token.IndexOfAny(new[] { '1', '2', '3', '4', '5', '6', '7', '8' }) == -1) continue;
+                                    
+                                    //解析Note
+                                    Note.ParseNote(CurLoadChart,Token,AlignTime);
+                                }
                             }
                         }
                         
@@ -103,6 +126,7 @@ public static class FileManager
             }
 
         }
+        File.WriteAllText(ChartPath + "/read.txt", JsonConvert.SerializeObject(CurLoadChart,Formatting.Indented));
     }
     #endregion
 
@@ -322,16 +346,16 @@ public static class FileManager
             if(Tokens.Length != 2) continue;
 
             //处理等级信息
-            if (Tokens[0].IndexOf("lv_")!= -1)
+            if (Tokens[0].IndexOf("lv")!= -1 && Tokens[0].IndexOf("5") != -1)
             {
                 if (chart.Difficulty == 0f) CollectProperty++;
-                //Debug.Log(Tokens[0].Substring(3));
-                chart.Difficulty = float.Parse(Tokens[0].Substring(3));
+                
+                chart.Difficulty = float.Parse(Tokens[1]);
                 continue;
             }
 
             //Note序列开始标志着属性信息结束
-            if (Tokens[0].IndexOf("inote_") != -1) break;
+            if (Tokens[0].IndexOf("inote") != -1) break;
 
             //Token比对
             switch (Tokens[0])
