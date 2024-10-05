@@ -8,6 +8,7 @@ using UnityEngine.UI;
 public class SongElement : MonoBehaviour
 {
     public Image Cover;
+    public Image Panel;
     public bool Initialed = false;
     public Text FormalName;
     public Text Designer;
@@ -17,12 +18,18 @@ public class SongElement : MonoBehaviour
     public TextMeshProUGUI Level;
 
     public PartialChart Target;
+    public int BingLevel;
 
     /// <summary>
     /// 绑定
     /// </summary>
     /// <param name="target"></param>
-    public void Bind(PartialChart target) => Target = target;
+    public void Bind(PartialChart target,int Level)
+    {
+        Target = target;
+        BingLevel = Level;
+    }
+    
     
 
     /// <summary>
@@ -34,6 +41,8 @@ public class SongElement : MonoBehaviour
         else UpdateData();
     }
     
+    public void RewriteImage(Sprite sprite)=>Panel.sprite = sprite;
+    
     /// <summary>
     /// 更新显示数据
     /// </summary>
@@ -43,9 +52,10 @@ public class SongElement : MonoBehaviour
         FormalName.text = Target.FormalName;
         Designer.text = Target.ChartWriter;
         BPM.text = "BPM " + Target.BPM;
-        Level.text = "" + (int)Target.Difficulty;
+        Level.text = "" + (int)Target.Difficulty[4];
+        if (Target.Difficulty[4] - (int)Target.Difficulty[4] > 0.55) Level.text += "+";
         if (Target.Histroy == null) Best.text = "";
-        Cover.sprite = FileManager.ReadOutPNG(FileManager.ChartPath + Target.InfoPath + "/cover.png");
+        Cover.sprite = FileManager.ReadOutPNG(FileManager.ChartPath + Target.InfoPath + "/bg.png");
     }
     
 }

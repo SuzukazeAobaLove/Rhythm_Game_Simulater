@@ -3,8 +3,8 @@ using Newtonsoft.Json.Converters;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEditor.Experimental.GraphView;
 using UnityEngine;
+using HaseMikan;
 
 [Serializable]
 public class Chart
@@ -28,31 +28,14 @@ public class Chart
 /// </summary>
 public class Note
 {
-    /// <summary>
-    /// Note基础类型枚举
-    /// </summary>
-    public enum NoteType
-    {
-        Tap, Hold, Slide_Tap, Slide_Track, Wifi_Slide, Touch, TouchHold
-    };
-
-    /// <summary>
-    /// 分区编号
-    /// </summary>
-    public enum Block
-    {
-        A1, A2, A3, A4, A5, A6, A7, A8,
-        B1, B2, B3, B4, B5, B6, B7, B8,
-        C,
-        D1 = 24, D2, D3, D4, D5, D6, D7, D8,
-        E1, E2, E3, E4, E5, E6, E7, E8
-    };
+    
     [JsonConverter(typeof(StringEnumConverter))]
     [SerializeField] public Block Rail_;          //分区
     [JsonConverter(typeof(StringEnumConverter))]
-    [SerializeField] public NoteType Type_;       //类型
+    [SerializeField] public DetailNoteType Type_;       //类型
     [SerializeField] public bool Ex_ = false;     //是否带保护套
     [SerializeField] public bool Break_ = false;  //是否为绝赞
+    [SerializeField] public bool Each_ = false;     //是否为多押
     [SerializeField] public double ExactTime_;    //正解时间
 
     /// <summary>
@@ -60,7 +43,7 @@ public class Note
     /// </summary>
     /// <param name="Token"></param>
     /// <returns></returns>
-    public static void ParseNote(Chart target,string token, double exTime)
+    public static void ParseNote(Chart target,string token, double exTime,bool ifEach)
     {
         //如果第一位是字母，则为Touch或者TouchHold
         if (char.IsLetter(token[0]))
@@ -69,8 +52,9 @@ public class Note
             if (token.Contains("h"))
             {
                 Note note = new Note();
-                note.Type_ = NoteType.TouchHold;
+                note.Type_ = DetailNoteType.TouchHold;
                 note.ExactTime_ = exTime;
+                
                 if (Enum.TryParse(token.Substring(0, token.IndexOf("C") == -1 ? 2 : 1), false, out note.Rail_))
                 {
                     //NOTE: 解析时值表达式
@@ -82,8 +66,9 @@ public class Note
             else
             {
                 Note note = new Note();
-                note.Type_ = NoteType.Touch;
+                note.Type_ = DetailNoteType.Touch;
                 note.ExactTime_ = exTime;
+                note.Each_ = ifEach;
                 if (Enum.TryParse(token.Substring(0, token.IndexOf("C") == -1 ? 2 : 1), false, out note.Rail_))
                 {
                     //NOTE: 烟花效果
@@ -99,8 +84,9 @@ public class Note
             if (token.Contains("h"))
             {
                 Note note = new Note();
-                note.Type_ = NoteType.Hold;
+                note.Type_ = DetailNoteType.Hold;
                 note.ExactTime_ = exTime;
+                note.Each_ = ifEach;
                 if (token.Contains("b")) note.Break_ = true;
                 if (token.Contains("x")) note.Ex_ = true;
 
@@ -114,7 +100,7 @@ public class Note
             else if (token.Contains("["))
             {
                 Note note = new Note();
-                note.Type_ = NoteType.Slide_Tap;
+                note.Type_ = DetailNoteType.Slide_Tap;
                 note.ExactTime_ = exTime;
                 if (token.Substring(0, 3).Contains("b")) note.Break_ = true;
                 if (token.Substring(0, 3).Contains("x")) note.Ex_ = true;
@@ -130,8 +116,9 @@ public class Note
                 foreach(var slide in each)
                 {
                     Note snote = new Note();
-                    snote.Type_ = NoteType.Slide_Track;
+                    snote.Type_ = DetailNoteType.Slide_Track;
                     snote.ExactTime_ = exTime;
+                    snote.Each_ = ifEach;
                     if(slide.Substring(3).Contains("b")) snote.Break_ = true;
                     snote.Rail_ = (Block)(token[0] - '1');
                     target.AddNote(snote);
@@ -141,8 +128,9 @@ public class Note
             else
             {
                 Note note = new Note();
-                note.Type_ = NoteType.Tap;
+                note.Type_ = DetailNoteType.Tap;
                 note.ExactTime_ = exTime;
+                note.Each_ = ifEach;
                 if(token.Contains("b")) note.Break_ = true;
                 if(token.Contains("x")) note.Ex_ = true;
 

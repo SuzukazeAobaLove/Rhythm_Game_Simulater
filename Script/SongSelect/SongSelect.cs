@@ -11,6 +11,7 @@ public class SongSelect: MonoBehaviour
 {
     [Header("生成元素")]
     public List<PartialChart> ChartInfos;
+    //public Sprite[] DiffImage;
     public GameObject Prefab;
     public Transform Content;
     
@@ -19,11 +20,14 @@ public class SongSelect: MonoBehaviour
     [Header("滚动视图")]
     public SimpleScrollSnap CategoryView;
     public SimpleScrollSnap SongView;
+
     [Header("按钮")]
     public Button ReturnButton;
     public Button StartButton;
     public Button LeftSongButton;
     public Button RightSongButton;
+    public Button DiffPlusButton;
+    public Button DiffMinusButton;
 
     [Header("动画参数")]
     public float TransitTime = 2.5f;
@@ -32,11 +36,15 @@ public class SongSelect: MonoBehaviour
     private PartialChart PreSong;
     private bool IfNoChart = false;
     private float TimeSinceSwitch = 0f;
+    private bool IfMultiDiff = false;       //是否将难度不同的谱面分开
+    private int CurDiff = 2;
+
 
     private void Awake()
     {
         if (!FileManager.AllLoaded) SceneManager.LoadScene(0);
         AudioSource = GetComponent<AudioSource>();
+        IfMultiDiff = (FileManager.CategoryType == CategoryType.Level);
     }
 
     void Start()
@@ -56,34 +64,34 @@ public class SongSelect: MonoBehaviour
     private void CreateSongElement()
     {
         //可操作性在这里
-        ChartInfos = FileManager.ChartInfos;
-        if(ChartInfos.Count == 0 )
+        ChartInfos = FileManager.CategoryResult[FileManager.SelectCategory];
+        if(ChartInfos.Count == 0)
         {
             IfNoChart = true;
             return;
         }
 
-        //创建并绑定元素
-        foreach (var Chart in ChartInfos)
-        {
-            var Element = Instantiate(Prefab, Content);
-            Element.GetComponent<SongElement>().Bind(Chart);
-            Element.GetComponent<SongElement>().UpdateData();
-        }
+        
 
         //数量少直接绑定
         if (ChartInfos.Count < 30)
         {
-            
+            //创建并绑定元素
+            foreach (var Chart in ChartInfos)
+            {
+                var Element = Instantiate(Prefab, Content);
+                Element.GetComponent<SongElement>().Bind(Chart, CurDiff);
+                Element.GetComponent<SongElement>().UpdateData();
+            }
         }
         else
         {
-            /*for(int i = 0;i < 30;++i)
+            for(int i = 0;i < 30;++i)
             {
                 var Element = Instantiate(Prefab, Content);
-                Element.GetComponent<SongElement>().Bind(ChartInfos[i]);
+                Element.GetComponent<SongElement>().Bind(ChartInfos[i],CurDiff);
                 Element.GetComponent<SongElement>().UpdateData();
-            }*/
+            }
         }
     }
 
@@ -94,7 +102,7 @@ public class SongSelect: MonoBehaviour
     {
         PreSong = ChartInfos[SongView.CenteredPanel];
         AudioSource.Stop();
-        AudioSource.clip = FileManager.ReadOutMP3(FileManager.ChartPath + PreSong.InfoPath + "/music.mp3");
+        AudioSource.clip = FileManager.ReadOutMP3(FileManager.ChartPath + PreSong.InfoPath + "/track.mp3");
         AudioSource.Play();
     }
 
@@ -102,6 +110,22 @@ public class SongSelect: MonoBehaviour
     /// 绑定给返回按钮
     /// </summary>
     public void ReturnButtonClick() => GameSystem.ExitScene();
+
+    public void OnDiffPlusButton()
+    {
+        CurDiff++;
+        //调整按钮
+        if (CurDiff == 6) DiffPlusButton.gameObject.SetActive(false);
+        if(CurDiff > 2) DiffMinusButton.gameObject.SetActive(true);
+    }
+    
+    public void OnDiffMinusButton()
+    {
+        CurDiff--;
+        //调整按钮
+        if (CurDiff == 2) DiffMinusButton.gameObject.SetActive(false);
+        if (CurDiff < 6) DiffPlusButton.gameObject.SetActive(true);
+    }
 
     /// <summary>
     /// 开始游玩按钮
@@ -135,7 +159,7 @@ public class SongSelect: MonoBehaviour
         //延时关闭音乐
         LinerClock.InsertDelayAction(1.0f, () => AudioSource.Stop());
         //延时加载
-        LinerClock.InsertDelayAction(TransitTime + 3.0f,() => GameSystem.OpenScene((int)Panel.PlaySong));
+        LinerClock.InsertDelayAction(TransitTime + 3.0f,() => GameSystem.OpenScene((int)Scenes.SongPlay));
     }
 
     void Update()

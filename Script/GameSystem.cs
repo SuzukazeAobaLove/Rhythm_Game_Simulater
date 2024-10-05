@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public enum Panel { MainMenu = 1,Profile,SongSelect,Arcade,Ranking,Statistic,PlaySong};
+
 public static class GameSystem
 {
+    //是否以街机模式游玩
+    public static bool IfArcade = false;
+
 
     private static Stack<int> _SceneOpened = new Stack<int>();
     

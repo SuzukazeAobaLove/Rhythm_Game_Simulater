@@ -1,6 +1,8 @@
 using DG.Tweening;
+using HaseMikan;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -12,24 +14,29 @@ public class LoadingTransition : MonoBehaviour
 
     void Start()
     {
-        StartCoroutine(PreLoad());
+        PreLoad();
     }
 
     /// <summary>
     /// ‘§º”‘ÿ
     /// </summary>
     /// <returns></returns>
-    public IEnumerator PreLoad()
+    public void PreLoad()
     {
-        yield return null;
+        Stopwatch sw = new Stopwatch();
+        sw.Start();
 
-        if (!FileManager.ProfileLoaded) FileManager.LoadProfile();
+        FileManager.LoadChartInfo();
+        
+        FileManager.LoadProfile();
 
-        if (!FileManager.ChartLoaded) FileManager.LoadChartInfo();
+        FileManager.DivideCharts();
 
         FileManager.AllLoaded = true;
 
         SceneManager.LoadScene(1);
-        yield break;
+        
+        sw.Stop();
+        FileManager.LoadDelay = sw.ElapsedMilliseconds;
     }
 }

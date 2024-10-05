@@ -9,3 +9,4 @@
 
 # 素材来源
 部分图标、图形 ： <a href="https://www.flaticon.com/free-icons/vinyl" title="vinyl icons">Flaticon</a>
+谱面语法参考：<a href="https://github.com/LingFeng-bbben/MajdataView/wiki/%E6%80%8E%E6%A0%B7%E5%86%99%E8%B0%B1%EF%BC%9F#3-slide-">MajdataView</a>       <a href="https://w.atwiki.jp/simai/pages/1002.html">Simai</a>

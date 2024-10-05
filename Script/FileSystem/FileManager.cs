@@ -1,15 +1,17 @@
 using DG.Tweening.Plugins.Core.PathCore;
+using HaseMikan;
 using Newtonsoft.Json;
 using NLayer;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Unity.VisualScripting;
-using Unity.VisualScripting.AssemblyQualifiedNameParser;
 using UnityEngine;
-using UnityEngine.Networking;
-using UnityEngine.UI;
 
 /// <summary>
 /// 文件管理器，负责读谱面，段位配置，读写设置，统计数据
@@ -24,13 +26,18 @@ public static class FileManager
     private static string CachePath = ProjectPath + "/Charts/log.txt";
     private static string RankPath = ProjectPath + "/RankLists/";
 
-    #region 文件状态
+    #region 游戏状态
     public static bool AllLoaded = false;
-    public static bool ProfileLoaded = false;
-    public static bool ChartLoaded = false;
+    public static CategoryType CategoryType;
+    public static float MaxLevel = 0;
+    public static string SelectCategory;
     #endregion
 
     #region 游玩部分
+    /// <summary>
+    /// 分类结果
+    /// </summary>
+    public static Dictionary<string,List<PartialChart>> CategoryResult = new Dictionary<string,List<PartialChart>>();
     
     /// <summary>
     /// 当前完全加载的谱面
@@ -116,7 +123,7 @@ public static class FileManager
                                     if (Token.IndexOfAny(new[] { '1', '2', '3', '4', '5', '6', '7', '8' }) == -1) continue;
                                     
                                     //解析Note
-                                    Note.ParseNote(CurLoadChart,Token,AlignTime);
+                                    Note.ParseNote(CurLoadChart,Token,AlignTime,Tokens.Length > 1);
                                 }
                             }
                         }
@@ -127,6 +134,96 @@ public static class FileManager
 
         }
         File.WriteAllText(ChartPath + "/read.txt", JsonConvert.SerializeObject(CurLoadChart,Formatting.Indented));
+    }
+
+    /// <summary>
+    /// 分类谱面
+    /// </summary>
+    public static void DivideCharts()
+    {
+
+        CategoryType = (CategoryType)UserProfile._Layout._Category._Value;
+        List<PartialChart> ChartList = ChartInfos;
+        CategoryResult.Clear();
+        CategoryResult["宴会场"] = new List<PartialChart>();
+
+        //判断排列类型
+        switch (CategoryType)
+        {
+            case CategoryType.Collection:
+                {
+                    foreach (var Chart in ChartList)
+                    {
+                        if (Chart.IfUtage)
+                        {
+                            CategoryResult["宴会场"].Add(Chart);
+                            continue;
+                        }
+                        if (!CategoryResult.ContainsKey(Chart.Collection))
+                            CategoryResult[Chart.Collection] = new List<PartialChart>();
+                        CategoryResult[Chart.Collection].Add(Chart);
+                    }
+                    break;
+                }
+            case CategoryType.Level:
+                {
+                    foreach (var Chart in ChartList)
+                    {
+                        if (Chart.IfUtage)
+                        {
+                            CategoryResult["宴会场"].Add(Chart);
+                            continue;
+                        }
+                        foreach (var Diff in Chart.Difficulty)
+                        {
+                            if (Diff == 0f) continue;
+                            string Diffstr = ((int)Diff).ToString();
+                            if (Diff > 6f && Diff - (int)Diff > 0.5f) Diffstr += "+";
+
+                            if (!CategoryResult.ContainsKey(Diffstr))
+                                CategoryResult[Diffstr] = new List<PartialChart>();
+                            CategoryResult[Diffstr].Add(Chart);
+                        }
+
+                    }
+                    break;
+                }
+            //未实现的功能
+            case CategoryType.Grade:
+                {
+                    break;
+                }
+            case CategoryType.Version:
+                {
+                    foreach (var Chart in ChartList)
+                    {
+                        if (Chart.IfUtage)
+                        {
+                            CategoryResult["宴会场"].Add(Chart);
+                            continue;
+                        }
+                        if (!CategoryResult.ContainsKey(Chart.Version))
+                            CategoryResult[Chart.Version] = new List<PartialChart>();
+
+                        CategoryResult[Chart.Version].Add(Chart);
+                    }
+                    break;
+                }
+            case CategoryType.All:
+                {
+                    CategoryResult["All"] = new List<PartialChart>();
+                    foreach (var Chart in ChartList)
+                    {
+                        if (Chart.IfUtage)
+                        {
+                            CategoryResult["宴会场"].Add(Chart);
+                            continue;
+                        }
+                        CategoryResult["All"].Add(Chart);
+                    }
+                    break;
+                }
+        }
     }
     #endregion
 
@@ -196,7 +293,7 @@ public static class FileManager
             if(!Directory.Exists(SettingFolderPath)) Directory.CreateDirectory(SettingFolderPath);
             File.WriteAllText(SettingFilePath,JsonConvert.SerializeObject(UserProfile));
         }
-        ProfileLoaded = true;
+        
     }
 
     /// <summary>
@@ -204,7 +301,7 @@ public static class FileManager
     /// </summary>
     public static void SaveProfile()
     {
-        File.WriteAllText(SettingFilePath,JsonConvert.SerializeObject(UserProfile));
+        File.WriteAllText(SettingFilePath,JsonConvert.SerializeObject(UserProfile,Formatting.Indented));
     }
 
     #endregion
@@ -214,42 +311,24 @@ public static class FileManager
     /// 所有谱面的信息
     /// </summary>
     public static List<PartialChart> ChartInfos;
-    /// <summary>
-    /// 从缓存中获取的临时字典
-    /// </summary>
-    private static Dictionary<string, PartialChart> CacheTemp;
     
+    /// <summary>
+    /// 读取延迟
+    /// </summary>
+    public static float LoadDelay = 0f;
     /// <summary>
     /// 加载谱面信息
     /// </summary>
     public static void LoadChartInfo()
     {
         ChartInfos = new List<PartialChart>();
-        CacheTemp = new Dictionary<string, PartialChart>();
-
-        //路径不存在那么一定没有谱面
-        if (!Directory.Exists(ChartPath))
-        {
-            Directory.CreateDirectory(ChartPath);
-        }
-        //如果没有缓存文件，只能全量扫描
-        else if (!File.Exists(CachePath))
-        {
-            TraverseFolders(ChartPath, false);
-            SaveCacheFile();
-        }
-        //如果存在，首先读入缓存
-        else
-        {
-            LoadCacheFile();
-            //再进行遍历
-            TraverseFolders(ChartPath, true);
-            SaveCacheFile();
-            CacheTemp.Clear();
-
-        }
         
-        ChartLoaded = true;
+        //路径不存在那么一定没有谱面
+        if (!Directory.Exists(ChartPath)) Directory.CreateDirectory(ChartPath);   
+        //全量扫描
+        else TraverseFolders(ChartPath);
+        
+        
         //绑定游玩记录
         //BindPlayHistory();
     }
@@ -265,57 +344,25 @@ public static class FileManager
     /// <summary>
     /// 遍历文件夹
     /// </summary>
-    private static void TraverseFolders(string folderPath,bool ifCache)
+    private static void TraverseFolders(string folderPath)
     {
         string[] subfolders = Directory.GetDirectories(folderPath);
 
         //如果是叶文件夹，则开始解析
         if(subfolders.Length == 0)
         {
-            //首先进行重命名
-            if(File.Exists(folderPath + "/maidata.txt")) File.Move(folderPath + "/maidata.txt", folderPath + "/data.txt");
-            if (File.Exists(folderPath + "/track.mp3")) File.Move(folderPath + "/track.mp3", folderPath + "/music.mp3");
-            if (File.Exists(folderPath + "/bg.png")) File.Move(folderPath + "/bg.png", folderPath + "/cover.png");
-
-            //如果有缓存
-            if(ifCache)
-            {
-                string RelativePath = folderPath.Substring(folderPath.IndexOf(ChartPath) + ChartPath.Length);
-                //Debug.Log(RelativePath);
-
-                
-                if (!File.Exists(folderPath + "/data.txt")) return;
-
-                //如果有缓存文件中有写
-                if (CacheTemp.ContainsKey(RelativePath))
-                {
-                    //如果一致则转移
-                    if (CacheTemp[RelativePath].LastEditTime == File.GetLastWriteTime(folderPath + "/data.txts").ToString())
-                    {
-                        ChartInfos.Add(CacheTemp[RelativePath]);
-                        CacheTemp.Remove(RelativePath);
-                        return;
-                    }
-                    //否则移除，选择读取文件
-                    else CacheTemp.Remove(RelativePath);
-                }
-            }
-
+            if (!File.Exists(folderPath + "/track.mp3")) return;
+            if (!File.Exists(folderPath + "/bg.png")) return;
             
-            if (!File.Exists(folderPath + "/music.mp3")) return;
-            if (!File.Exists(folderPath + "/cover.png")) return;
-            
-
             //解析文件
             PartialChart chart = ParseFile(folderPath);
             if(chart != null) ChartInfos.Add(chart);
-            
-                    
         }
         //否则递归
         else
         {
-            foreach(string subfolder in subfolders) TraverseFolders(subfolder,ifCache);
+            //Parallel.ForEach( subfolders,item => TraverseFolders(item));
+            foreach(string subfolder in subfolders) TraverseFolders(subfolder);
         }
     }
 
@@ -326,111 +373,110 @@ public static class FileManager
     private static PartialChart ParseFile(string folderPath)
     {
         PartialChart chart = new PartialChart();
-
-        //切割文本
-        string[] Elements = Regex.Split(File.ReadAllText(folderPath + "/data.txt"), "\r?\n");
-
+        chart.Difficulty.AddRange(new List<float>{ 0,0,0,0,0,0,0,0});
+        
         //填入路径信息
         chart.InfoPath = folderPath.Substring(folderPath.IndexOf(ChartPath) + ChartPath.Length);
-        chart.LastEditTime = File.GetLastWriteTime(folderPath + "/data.txt").ToString();
-
-        //在文本中寻找属性
-        int CollectProperty = 0;        
-        foreach (string Element in Elements)
-        {
-            if (Element.Length == 0 || Element[0] != '&') continue;
-
-            //提取Token
-            string[] Tokens = Element.Split('=');
-            Tokens[0] = Tokens[0].Substring(1);
-            if(Tokens.Length != 2) continue;
-
-            //处理等级信息
-            if (Tokens[0].IndexOf("lv")!= -1 && Tokens[0].IndexOf("5") != -1)
-            {
-                if (chart.Difficulty == 0f) CollectProperty++;
-                
-                chart.Difficulty = float.Parse(Tokens[1]);
-                continue;
-            }
-
-            //Note序列开始标志着属性信息结束
-            if (Tokens[0].IndexOf("inote") != -1) break;
-
-            //Token比对
-            switch (Tokens[0])
-            {
-                case "title":
-                    {
-                        if (chart.FormalName == null) CollectProperty++;
-                        chart.FormalName = Tokens[1];
-                        break;
-                    }
-                case "shortid":
-                case "id":
-                    {
-                        if (chart.ID == 0) CollectProperty++;
-                        chart.ID = int.Parse(Tokens[1]);
-                        break;
-                    }
-                case "artist":
-                    {
-                        if (chart.SongWriter == null) CollectProperty++;
-                        chart.SongWriter = Tokens[1];
-                        break;
-                    }
-                case "des":
-                case "designer":
-                    {
-                        if (chart.ChartWriter == null) CollectProperty++;
-                        chart.ChartWriter = Tokens[1];
-                        break;
-                    }
-                case "wholebpm":
-                case "bpm":
-                    {
-                        if(chart.BPM == 0) CollectProperty++;
-                        chart.BPM = int.Parse(Tokens[1]);
-                        break;
-                    }
-                case "genre":
-                case "collection":
-                    {
-                        if (chart.Collection == null) CollectProperty++;
-                        chart.Collection = Tokens[1];
-                        break;
-                    }
-            }
-        }
-        //如果属性数量不够
-        if(CollectProperty < 7)return null;
-        else return chart;
-    }
-
-    /// <summary>
-    /// 读取缓存信息文件
-    /// </summary>
-    private static void LoadCacheFile()
-    {
-        string[] Element = Regex.Split(File.ReadAllText(CachePath), "\r?\n");
-        //放到临时字典中去
-        foreach (var Text in Element)
-        {
-            PartialChart Chart = PartialChart.ParseText(Text);
-            if(Chart != null) CacheTemp[Chart.InfoPath] = Chart;
-        }
-    }
-
-
-    /// <summary>
-    /// 保存缓存信息文件
-    /// </summary>
-    private static void SaveCacheFile()
-    {
-        StreamWriter writer = new StreamWriter(CachePath);
-        foreach(var chart in ChartInfos) writer.WriteLine(chart.GetWriteText());
-        writer.Close();
         
+        
+        //在文本中寻找属性
+        int CollectProperty = 0;
+        bool IfValidDiff = false;
+
+        
+        using(StreamReader sr = new StreamReader(folderPath + "/maidata.txt"))
+         {
+            //读取
+            while (!sr.EndOfStream)
+            {
+                string Line = sr.ReadLine();
+                
+                //格式基准
+                if(Line.Length == 0) continue;
+                if (Line.Contains("inote")) break;
+                if (Line[0] != '&') continue;
+
+                //切割键值
+                Line = Line.Remove(0, 1);
+                string[] Token = Line.Split("=");
+                if (Token.Length != 2) continue;
+
+                //解析难度
+                if (Token[0].IndexOf("lv") != -1)
+                {
+                    if (Token[1].Length == 0) continue;
+
+                    //标记宴谱
+                    if (Token[1].Last() == '?')
+                    {
+                        Token[1] = Token[1].Remove(Token[1].Length - 1);
+                        chart.IfUtage = true;
+                    }
+
+                    //以防报错
+                    try { chart.Difficulty[int.Parse(Token[0].Substring(3)) - 1] = float.Parse(Token[1]); }
+                    catch { continue; }
+                    
+                    IfValidDiff = true;
+                    MaxLevel = Mathf.Max(MaxLevel, float.Parse(Token[1]));
+
+                    continue;
+                }
+
+                //Token比对
+                switch (Token[0])
+                {
+                    case "title":
+                        {
+                            if (chart.FormalName == null) CollectProperty++;
+                            chart.FormalName = Token[1];
+                            break;
+                        }
+                    case "shortid":
+                        {
+                            if (chart.ID == 0) CollectProperty++;
+                            try { chart.ID = int.Parse(Token[1]); }
+                            catch { }
+                            break;
+                        }
+                    case "artist":
+                        {
+                            if (chart.SongWriter == null) CollectProperty++;
+                            chart.SongWriter = Token[1];
+                            break;
+                        }
+                    case "des":
+                        {
+                            if (chart.ChartWriter == null) CollectProperty++;
+                            chart.ChartWriter = Token[1];
+                            break;
+                        }
+                    case "wholebpm":
+                        {
+                            if (chart.BPM == 0) CollectProperty++;
+                            try { chart.BPM = int.Parse(Token[1]); }
+                            catch { }
+                            break;
+                        }
+                    case "genre":
+                        {
+                            if (chart.Collection == null) CollectProperty++;
+                            chart.Collection = Token[1];
+                            break;
+                        }
+                    case "version":
+                        {
+                            if (chart.Version == null) CollectProperty++;
+                            chart.Version = Token[1];
+                            break;
+                        }
+                }
+            }
+        }
+        
+        //如果属性数量不够
+        if(!IfValidDiff)return null;
+        else return chart;
     }
 
     #endregion

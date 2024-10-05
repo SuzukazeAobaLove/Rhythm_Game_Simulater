@@ -12,6 +12,7 @@ public interface ICycledValue
     public void Add();
     public void Sub();
     public string GetValue();
+    public string GetDescription();
 }
 
 
@@ -72,16 +73,23 @@ public class CycleValueVarible<TRealVarible> : ICycledValue where TRealVarible :
     /// <summary>
     /// 用于显示的字面值
     /// </summary>
-    [JsonIgnore] public string _EqualText = "Undefied";
+    [JsonIgnore] public string _EqualText = "Undefined";
     public string GetValue() => _EqualText;
 
+    /// <summary>
+    /// 用于显示的介绍
+    /// </summary>
+    [JsonIgnore] public readonly string _Description = "Undefined";
+    public string GetDescription()=> _Description;
+    
     /// <summary>
     /// 默认构造函数
     /// </summary>
     /// <param name="Dict"></param>
-    public CycleValueVarible(Dictionary<int, Selection> Dict)
+    public CycleValueVarible(Dictionary<int, Selection> Dict,string Description)
     {
         _RealVaribleDict = Dict;
+        _Description = Description;
         SetEqualText();
     }
 
